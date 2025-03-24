@@ -1,0 +1,1 @@
+# Kaidos Wallet module
