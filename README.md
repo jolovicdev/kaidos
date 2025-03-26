@@ -1,15 +1,22 @@
-# Kaidos Python Blockchain Cryptocurrency and wallet
+# Kaidos: Python-Based Blockchain & Cryptocurrency Implementation
 
-Exploration of blockchain tech with a full UTXO model, mining, and all that good stuff, but still - it's a hobby project and just exploration.
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python Versions](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)](https://www.python.org/)
 
-## What's Inside
+Kaidos is a lightweight, educational blockchain and cryptocurrency implementation written in Python. It features a complete UTXO transaction model (similar to Bitcoin), proof-of-work mining, wallet management, and peer-to-peer networking capabilities. This project serves as both a learning resource for blockchain technology and a functional cryptocurrency system.
 
-- A complete UTXO system (like Bitcoin uses) for tracking coins
-- Mining with rewards that halve over time (just like the real thing!)
-- Transaction fees for miners because they deserve something for their work
-- Wallet tools to create and manage your keys securely
-- P2P networking so nodes can talk to each other
-- Simple command-line tools to play around with it all
+## Key Features
+
+- **Complete UTXO System**: Implements the Unspent Transaction Output model used by Bitcoin for secure coin tracking
+- **Proof-of-Work Mining**: Includes mining functionality with difficulty adjustment and block rewards
+- **Halving Mechanism**: Block rewards that halve every 210,000 blocks, similar to Bitcoin's economic model
+- **Transaction Fees**: Miners receive transaction fees as incentives for including transactions in blocks
+- **Secure Wallet Management**: Tools to create and manage cryptographic keys and addresses
+- **Multi-Signature Support**: Create addresses requiring multiple signatures for enhanced security
+- **Merkle Tree Verification**: Efficient transaction verification using cryptographic Merkle trees
+- **P2P Networking**: Decentralized node communication for transaction and block propagation
+- **Consensus Algorithm**: Implements chain selection based on proof-of-work and chain length
+- **Command-Line Interface**: Simple CLI tools for all blockchain operations
 
 ## Getting Started
 
@@ -106,28 +113,32 @@ Want to send someone some Kaidos coins? It's pretty simple:
    kaidos-node send transaction.json
    ```
 
-## How It All Works
+## Architecture
 
-### The Building Blocks
+### Core Components
 
-- **Blocks** - These are batches of transactions added to the chain
-- **Blockchain** - The full history of blocks linked together
-- **Transaction Manager** - Keeps track of all the coins and who owns what
-- **Wallet** - Your digital identity and key storage
-- **Node** - Connects you to other people running Kaidos
+- **Blocks**: Containers for batches of transactions with cryptographic links to previous blocks
+- **Blockchain**: The complete history of all blocks linked in a secure chain
+- **Transaction Manager**: Handles the UTXO set, transaction validation, and mempool management
+- **Wallet**: Manages cryptographic keys, addresses, and transaction signing
+- **Node**: Provides network communication and consensus mechanisms
 
-### The UTXO Thing
+### UTXO Transaction Model
 
-1. Your coins exist as "unspent outputs" from previous transactions
-2. When you spend coins, you use these outputs as inputs
-3. Any leftover amount comes back to you as change
-4. Miners get the difference as a fee
+The Unspent Transaction Output (UTXO) model is a fundamental concept in Kaidos:
 
-### Mining Rewards
+1. Coins exist as "unspent outputs" from previous transactions
+2. When spending coins, these outputs are consumed as inputs for new transactions
+3. Change from transactions is returned as a new UTXO to the sender
+4. Transaction fees (the difference between inputs and outputs) are collected by miners
 
-- Miners start getting 50 coins per block
-- Every 210,000 blocks (like Bitcoin), this cuts in half
-- So eventually it goes 25, then 12.5, then 6.25... you get the idea
+### Mining and Consensus
+
+- **Block Rewards**: Miners receive 50 coins initially for each new block
+- **Halving Schedule**: Rewards halve every 210,000 blocks (25, 12.5, 6.25, etc.)
+- **Difficulty Adjustment**: Mining difficulty adjusts based on block generation time
+- **Proof-of-Work**: Miners must find a block hash with a specific number of leading zeros
+- **Chain Selection**: The longest valid chain with the most cumulative work is considered canonical
 
 ## Testing It Out
 
@@ -158,24 +169,32 @@ Kaidos/
 │   ├── block.py        # Block structure
 │   ├── blockchain.py   # Chain management
 │   ├── exceptions.py   # Custom errors
+│   ├── merkle_tree.py  # Merkle tree implementation
 │   └── transaction_manager.py  # Handles transactions and UTXOs
 ├── network/            # P2P networking
 │   └── node.py         # Node implementation
 ├── wallet/             # Wallet functionality
-│   └── wallet.py       # Manages keys and addresses
+│   ├── wallet.py       # Manages keys and addresses
+│   └── multisig.py     # Multi-signature wallet support
 └── tests/              # Making sure it all works
-    └── test_*.py       # Various test files
+    ├── test_blockchain.py      # Tests for blockchain
+    ├── test_consensus.py       # Tests for consensus
+    ├── test_merkle_tree.py     # Tests for Merkle tree
+    ├── test_multisig.py        # Tests for multi-signature
+    ├── test_network.py         # Tests for networking
+    ├── test_transaction_manager.py  # Tests for transactions
+    └── test_wallet.py          # Tests for wallet
 ```
 
-### Database Stuff
+### Data Storage
 
-I'm using ZenithDB (my sqlite3 wrapper) for data storage , It stores:
+Kaidos uses ZenithDB (a SQLite wrapper) for persistent storage of:
 
-- All the blocks
-- All the unspent coins (UTXOs)
-- Pending transactions
-- Your wallets and keys
-- Connection info for other nodes
+- **Blockchain Data**: All blocks and their transactions
+- **UTXO Set**: The current set of unspent transaction outputs
+- **Mempool**: Pending transactions waiting to be mined
+- **Wallet Information**: Encrypted keys and address data
+- **Network Data**: Peer connection information and node configuration
 
 ## License
 

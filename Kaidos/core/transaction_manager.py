@@ -271,12 +271,28 @@ class TransactionManager:
     
     def _verify_input_signature(self, tx_input: Dict[str, Any], address: str) -> bool:
         try:
-            from Kaidos.wallet.wallet import Wallet
-            wallet = Wallet()
-            result = wallet.verify_input_signature(tx_input, address)
-            wallet.close()
-            return result
-        except Exception:
+            # Check if this is a multi-signature input
+            if tx_input.get("multisig", False):
+                from Kaidos.wallet.multisig import MultiSigWallet
+                
+                # Get multi-signature data from the database
+                multisig_data = self.db.collection("multisig").find_one({"address": address})
+                if not multisig_data:
+                    return False
+                    
+                # Verify multi-signature transaction
+                return MultiSigWallet.verify_multisig_transaction(tx_input, multisig_data)
+            else:
+                # Regular single-signature transaction
+                from Kaidos.wallet.wallet import Wallet
+                wallet = Wallet()
+                result = wallet.verify_input_signature(tx_input, address)
+                wallet.close()
+                return result
+        except Exception as e:
+            # Log the error for debugging
+            import logging
+            logging.error(f"Signature verification error: {str(e)}")
             return False
     
     def get_pending_transactions(self, limit: int = 100) -> List[Dict[str, Any]]:

@@ -2,6 +2,7 @@ import argparse
 import getpass
 import sys
 import json
+from datetime import datetime
 from typing import Dict, Any, Optional
 
 from Kaidos.wallet.wallet import Wallet
@@ -223,6 +224,114 @@ def list_addresses(args: argparse.Namespace) -> None:
         wallet.close()
 
 
+def create_multisig(args: argparse.Namespace) -> None:
+    wallet = Wallet()
+    
+    try:
+        # Parse public keys
+        public_keys = []
+        for key_file in args.public_keys:
+            with open(key_file, 'r') as f:
+                public_keys.append(f.read().strip())
+        
+        # Create multisig address
+        from Kaidos.wallet.multisig import MultiSigWallet
+        address = MultiSigWallet.create_multisig_address(public_keys, args.required)
+        
+        # Store multisig data in database
+        multisig_data = {
+            "address": address,
+            "public_keys": public_keys,
+            "required_signatures": args.required,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        wallet.db.collection("multisig").insert(multisig_data)
+        
+        print(f"Multi-signature address created successfully!")
+        print(f"Address: {address}")
+        print(f"Required signatures: {args.required} of {len(public_keys)}")
+        print("IMPORTANT: Keep this address and the public keys safe.")
+        
+    except Exception as e:
+        print(f"Error creating multi-signature address: {str(e)}")
+        sys.exit(1)
+    finally:
+        wallet.close()
+
+
+def sign_multisig_tx(args: argparse.Namespace) -> None:
+    wallet = Wallet()
+    
+    try:
+        # Load transaction from file
+        with open(args.transaction, 'r') as f:
+            tx_data = json.load(f)
+        
+        # Get wallet for the key
+        address_data = wallet.addresses.find_one({"address": args.address})
+        if not address_data:
+            print(f"Error: Address not found: {args.address}")
+            sys.exit(1)
+            
+        # Get wallet
+        w = wallet.get_wallet(address_data["wallet_id"])
+        if not w:
+            print(f"Error: Wallet not found for address: {args.address}")
+            sys.exit(1)
+            
+        # Check if wallet is encrypted
+        if w.get('encrypted', False):
+            passphrase = getpass.getpass("Enter passphrase: ")
+        else:
+            passphrase = None
+        
+        # Find the input to sign
+        input_idx = -1
+        for i, tx_input in enumerate(tx_data.get("inputs", [])):
+            if tx_input.get("txid") == args.txid and tx_input.get("vout") == args.vout:
+                input_idx = i
+                break
+                
+        if input_idx == -1:
+            print(f"Error: Input {args.txid}:{args.vout} not found in transaction")
+            sys.exit(1)
+            
+        # Sign the input
+        from Kaidos.wallet.multisig import MultiSigWallet
+        signature = MultiSigWallet.sign_transaction_input(
+            args.txid,
+            args.vout,
+            address_data["private_key"],
+            passphrase
+        )
+        
+        # Add signature to transaction
+        if "signatures" not in tx_data["inputs"][input_idx]:
+            tx_data["inputs"][input_idx]["signatures"] = []
+            tx_data["inputs"][input_idx]["multisig"] = True
+            
+        # Add signature with key index
+        tx_data["inputs"][input_idx]["signatures"].append({
+            "signature": signature,
+            "key_index": args.key_index
+        })
+        
+        # Save updated transaction
+        with open(args.output or args.transaction, 'w') as f:
+            json.dump(tx_data, f, indent=2)
+            
+        print(f"Transaction signed successfully!")
+        print(f"Signature added for input {args.txid}:{args.vout} with key index {args.key_index}")
+        print(f"Transaction saved to {args.output or args.transaction}")
+        
+    except Exception as e:
+        print(f"Error signing transaction: {str(e)}")
+        sys.exit(1)
+    finally:
+        wallet.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Kaidos Wallet CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
@@ -264,6 +373,33 @@ def main() -> None:
     utxos_parser = subparsers.add_parser("utxos", help="Get UTXOs for a wallet")
     utxos_parser.add_argument("address", help="Wallet address")
     
+    # Create multi-signature address command
+    multisig_parser = subparsers.add_parser("multisig", help="Create a multi-signature address")
+    multisig_parser.add_argument(
+        "--required", "-r",
+        type=int,
+        required=True,
+        help="Number of required signatures"
+    )
+    multisig_parser.add_argument(
+        "--public-keys", "-p",
+        nargs="+",
+        required=True,
+        help="Files containing public keys"
+    )
+    
+    # Sign multi-signature transaction command
+    sign_multisig_parser = subparsers.add_parser("sign-multisig", help="Sign a multi-signature transaction")
+    sign_multisig_parser.add_argument("transaction", help="Transaction file (JSON)")
+    sign_multisig_parser.add_argument("address", help="Signing address")
+    sign_multisig_parser.add_argument("txid", help="Transaction input ID")
+    sign_multisig_parser.add_argument("vout", type=int, help="Transaction input vout")
+    sign_multisig_parser.add_argument("key_index", type=int, help="Index of the key in the multisig address")
+    sign_multisig_parser.add_argument(
+        "--output", "-o",
+        help="Output file to save signed transaction (JSON)"
+    )
+    
     args = parser.parse_args()
     
     if args.command == "create":
@@ -280,6 +416,10 @@ def main() -> None:
         create_transaction(args)
     elif args.command == "utxos":
         get_utxos(args)
+    elif args.command == "multisig":
+        create_multisig(args)
+    elif args.command == "sign-multisig":
+        sign_multisig_tx(args)
     else:
         parser.print_help()
 

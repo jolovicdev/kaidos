@@ -1,6 +1,6 @@
-# Kaidos Cryptocurrency Commands
+# Kaidos Blockchain & Cryptocurrency Command Reference
 
-This document provides a comprehensive list of all available commands for the Kaidos cryptocurrency.
+This comprehensive reference guide documents all available commands for the Kaidos blockchain and cryptocurrency system. Use these commands to interact with wallets, manage nodes, mine blocks, and perform transactions on the network.
 
 ## Wallet Commands
 
@@ -31,6 +31,12 @@ kaidos-wallet tx <sender> <recipient> <amount> --output transaction.json
 
 # Get UTXOs for a wallet
 kaidos-wallet utxos <address>
+
+# Create a multi-signature address
+kaidos-wallet multisig --required <num_signatures> --public-keys <key_file1> <key_file2> ...
+
+# Sign a multi-signature transaction
+kaidos-wallet sign-multisig <transaction_file> <signing_address> <txid> <vout> <key_index> --output signed_tx.json
 ```
 
 ## Node Commands

@@ -118,10 +118,10 @@ class Blockchain:
                 try:
                     fees += tx_manager.calculate_transaction_fee(tx)
                     
-                    # Skip transaction validation for now to allow mining with pending transactions
-                    # if not tx_manager.validate_transaction(tx):
-                    #     tx_manager.close()
-                    #     return False
+                    # Validate each transaction in the block
+                    if not tx_manager.validate_transaction(tx):
+                        tx_manager.close()
+                        return False
                 except Exception:
                     # Ignore validation errors for now
                     pass
@@ -132,9 +132,9 @@ class Blockchain:
             return False
             
         coinbase_amount = coinbase_tx["outputs"][0]["amount"]
-        # Be more lenient with coinbase amount validation
-        # if abs(coinbase_amount - (reward + fees)) > 0.00001:
-        #     return False
+        # Validate coinbase amount matches reward plus fees
+        if abs(coinbase_amount - (reward + fees)) > 0.00001:
+            return False
             
         if coinbase_tx["outputs"][0]["address"] != block.miner_address:
             return False

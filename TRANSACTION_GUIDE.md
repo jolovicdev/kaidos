@@ -1,6 +1,12 @@
-# Sending Coins with Kaidos
+# Kaidos Transaction Guide: How to Send and Receive Cryptocurrency
 
-Hey there! This guide will walk you through sending your hard-earned Kaidos coins to other people. It's pretty straightforward once you get the hang of it!
+This comprehensive guide explains how to create, send, and verify transactions in the Kaidos blockchain system. Follow these step-by-step instructions to manage your digital assets securely and efficiently.
+
+## Table of Contents
+1. [Basic Transactions](#before-you-start)
+2. [Multi-Signature Transactions](#multi-signature-transactions)
+3. [Transaction Verification](#how-it-works-the-nerdy-details)
+4. [Troubleshooting](#troubleshooting)
 
 ## Before You Start
 
@@ -130,6 +136,57 @@ kaidos-wallet balance KD3P7TTS5ECJMHWA4FLL7A3OA67URTCZUK
 4. She signs it with her private key and broadcasts it
 5. Charlie (the miner) includes her transaction in a block and gets a small fee
 6. Bob now has his 20 coins, and Alice has 30 left
+
+## Multi-Signature Transactions
+
+Multi-signature (multisig) addresses require multiple signatures to authorize a transaction, providing enhanced security and enabling shared control of funds.
+
+### Creating a Multi-Signature Address
+
+1. First, you need public keys from all participants. Export each participant's public key to a file:
+   ```bash
+   # For each participant, create a wallet and save the public key
+   kaidos-wallet create
+   # Note the address, then get the public key from the database
+   ```
+
+2. Create the multi-signature address:
+   ```bash
+   kaidos-wallet multisig --required 2 --public-keys alice_key.pub bob_key.pub charlie_key.pub
+   ```
+   This creates a 2-of-3 multisig address, requiring any 2 of the 3 participants to sign transactions.
+
+3. Send funds to the multi-signature address just like any other address.
+
+### Spending from a Multi-Signature Address
+
+1. Create an unsigned transaction template:
+   ```bash
+   # Create a transaction template (this will fail but create a file)
+   kaidos-wallet tx <multisig_address> <recipient_address> <amount> --output unsigned_tx.json
+   ```
+
+2. Have each required signer sign the transaction:
+   ```bash
+   # Alice signs
+   kaidos-wallet sign-multisig unsigned_tx.json <alice_address> <txid> <vout> 0 --output partially_signed.json
+   
+   # Bob signs
+   kaidos-wallet sign-multisig partially_signed.json <bob_address> <txid> <vout> 1
+   ```
+   
+   The `key_index` parameter (0, 1, 2) corresponds to the position of the signer's public key in the original multisig creation.
+
+3. Once enough signatures are collected, broadcast the transaction:
+   ```bash
+   kaidos-node send partially_signed.json
+   ```
+
+### Benefits of Multi-Signature
+
+- **Enhanced Security**: Funds can't be spent if a single key is compromised
+- **Shared Control**: Perfect for business accounts, escrow, or family funds
+- **Trustless Operations**: No single party has complete control over the funds
 
 ## Troubleshooting
 

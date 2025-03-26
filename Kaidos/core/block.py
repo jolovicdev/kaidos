@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+from Kaidos.core.merkle_tree import MerkleTree
+
 
 class Block:
     
@@ -14,7 +16,8 @@ class Block:
         timestamp: Optional[str] = None,
         nonce: int = 0,
         hash: Optional[str] = None,
-        miner_address: Optional[str] = None
+        miner_address: Optional[str] = None,
+        merkle_root: Optional[str] = None
     ):
         self.index = index
         self.transactions = transactions
@@ -22,12 +25,13 @@ class Block:
         self.timestamp = timestamp or datetime.now().isoformat()
         self.nonce = nonce
         self.miner_address = miner_address
+        self.merkle_root = merkle_root or MerkleTree.create_merkle_root(transactions)
         self.hash = hash or self.compute_hash()
     
     def compute_hash(self) -> str:
         block_data = {
             "index": self.index,
-            "transactions": self.transactions,
+            "merkle_root": self.merkle_root,
             "previous_hash": self.previous_hash,
             "timestamp": self.timestamp,
             "nonce": self.nonce,
@@ -52,7 +56,8 @@ class Block:
             "timestamp": self.timestamp,
             "nonce": self.nonce,
             "hash": self.hash,
-            "miner_address": self.miner_address
+            "miner_address": self.miner_address,
+            "merkle_root": self.merkle_root
         }
     
     @classmethod
@@ -64,8 +69,17 @@ class Block:
             timestamp=block_data["timestamp"],
             nonce=block_data["nonce"],
             hash=block_data["hash"],
-            miner_address=block_data.get("miner_address")
+            miner_address=block_data.get("miner_address"),
+            merkle_root=block_data.get("merkle_root")
         )
+    
+    def verify_transaction(self, tx_hash: str, proof: List[dict]) -> bool:
+        """Verify that a transaction is included in this block using a Merkle proof."""
+        return MerkleTree.verify_transaction(tx_hash, self.merkle_root, proof)
+    
+    def generate_transaction_proof(self, tx_hash: str) -> Optional[List[dict]]:
+        """Generate a Merkle proof for a transaction in this block."""
+        return MerkleTree.generate_proof(tx_hash, self.transactions)
     
     def __str__(self) -> str:
         return (
